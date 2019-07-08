@@ -1,5 +1,6 @@
 # JWTrek
 JWT Token C# Bruteforcer (HS256) 
+(pure bruteforce, no wordlist yet)
 
 To crack HS256 JWT tokens.
 
