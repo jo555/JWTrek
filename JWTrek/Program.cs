@@ -7,6 +7,7 @@ using System.Timers;
 using System.Threading.Tasks;
 using System.Globalization;
 using System.Numerics;
+using System.IO;
 
 namespace JWTest
 {
@@ -29,6 +30,9 @@ namespace JWTest
             while (!rawTokenOk)
             {
                 Console.WriteLine("\r\n[?] Please enter token");
+                byte[] bytes = new byte[2000];
+                Stream inputStream = Console.OpenStandardInput(bytes.Length);
+                Console.SetIn(new StreamReader(inputStream));
                 rawToken = Console.ReadLine();
                 rawTokenOk = (rawToken != string.Empty) && (rawToken.Split('.').Length == 3);
             }           
