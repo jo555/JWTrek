@@ -1,8 +1,8 @@
 # JWTrek
-JWT Token C# Bruteforcer (HS256) 
+JWT Token C# Bruteforcer (HS128, HS256, HS384, HS512) 
 (pure bruteforce, no wordlist yet)
 
-To crack HS256 JWT tokens.
+To crack HS128, HS256, HS384, HS512 JWT tokens.
 
 ![JWTrek screenshot](http://www.georgestaupin.com/wp-content/uploads/2019/07/JWTrek-test-no-monitoring-15.png)
 
@@ -10,7 +10,7 @@ To crack HS256 JWT tokens.
 
 Launch EXE and follow the prompt:
 
-* **TOKEN**: the full HS256 JWT token string to crack
+* **TOKEN**: the full JWT token string to crack
 * **CHARSET**: the alphabet to use for the brute force (default: "abcdefghijklmnopqrstuvwxyz0123456789")
 * **LENGTH**: the length of the string generated during the brute force (default: 6)
 
