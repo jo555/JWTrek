@@ -4,7 +4,7 @@ JWT Token C# Bruteforcer (HS128, HS256, HS384, HS512)
 
 To crack HS128, HS256, HS384, HS512 JWT tokens.
 
-![JWTrek screenshot](http://www.georgestaupin.com/wp-content/uploads/2019/07/JWTrek-test-no-monitoring-15.png)
+![JWTrek screenshot](http://www.georgestaupin.com/wp-content/uploads/2020/01/CaptureJWTrek.png)
 
 ## Usage
 
