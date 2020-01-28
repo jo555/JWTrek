@@ -14,18 +14,21 @@ namespace JWTest
     class Program
     {
         public static Timer timer1;
+        public static int algo;
+        public static string algoDisplay;
         public static int count;
         public static int tick = 0;
         public static bool found = false;
         public static bool live = false;
-        public static string version = "v1.1";
+        public static string version = "v2.0";
         public static string defaultCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
         public static int defaultLength = 6;
 
         static void Main(string[] args)
         {
-            printBanner();
+            PrintBanner();
             bool rawTokenOk = false;
+            bool rawTokenIsSupported = false;
             string rawToken = "";
             while (!rawTokenOk)
             {
@@ -34,19 +37,55 @@ namespace JWTest
                 Stream inputStream = Console.OpenStandardInput(bytes.Length);
                 Console.SetIn(new StreamReader(inputStream));
                 rawToken = Console.ReadLine();
-                rawTokenOk = (rawToken != string.Empty) && (rawToken.Split('.').Length == 3);
+                try
+                {
+                    byte[] btab = Base64UrlDcode(rawToken.Split('.')[0]);
+                    var tokenHeader = Encoding.UTF8.GetString(btab, 0, btab.Length);                   
+                    if (tokenHeader.IndexOf("hs128", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        rawTokenIsSupported = true;
+                        algo = 1;
+                        algoDisplay = "HS128";
+                    }
+                    else if (tokenHeader.IndexOf("hs256", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        rawTokenIsSupported = true;
+                        algo = 2;
+                        algoDisplay = "HS256";
+                    }
+                    else if (tokenHeader.IndexOf("hs384", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        rawTokenIsSupported = true;
+                        algo = 3;
+                        algoDisplay = "HS384";
+                    }
+                    else if (tokenHeader.IndexOf("hs512", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        rawTokenIsSupported = true;
+                        algo = 4;
+                        algoDisplay = "HS512";
+                    }
+                    if (!rawTokenIsSupported)
+                    {
+                        Console.WriteLine("[!] Algorythm not supported");
+                    }
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine(@"/!\ Token parsing error : " + ex.Message);
+                }
+                rawTokenOk = rawTokenIsSupported && (rawToken != string.Empty) && (rawToken.Split('.').Length == 3);
             }           
 
-            Console.WriteLine("\r\n[?] Please enter custom charset ["+ defaultCharset + "]");
+            Console.WriteLine("\r\n[?] Please enter custom charset [default: "+ defaultCharset + "]");
             string charset = Console.ReadLine();
             if ((charset == null) || (charset == string.Empty))
             {
                 charset = defaultCharset;
             }
 
-            Console.WriteLine("\r\n[?] Please enter length ["+ defaultLength + "]");
-            int realLength;
-            if (!int.TryParse(Console.ReadLine(), out realLength))
+            Console.WriteLine("\r\n[?] Please enter length [default: "+ defaultLength + "]");
+            if (!int.TryParse(Console.ReadLine(), out int realLength))
             {
                 realLength = defaultLength;
             }
@@ -55,7 +94,7 @@ namespace JWTest
             live = Console.ReadLine().Equals("y");     
 
             Console.Clear();
-            printBanner();
+            PrintBanner();
             Console.WriteLine("[TOKEN] > " + rawToken);
             Console.WriteLine("[CHARSET] > " + charset);
             Console.WriteLine("[LENGTH] > " + realLength);
@@ -66,12 +105,13 @@ namespace JWTest
                 NumberFormatInfo nfi = new CultureInfo("en-US", false).NumberFormat;
                 BigInteger intSum = Convert.ToInt64(sum);
                 Console.WriteLine("[Total combinations] > " + sum.ToString("N", nfi).Replace(".00", ""));
-                Console.WriteLine("[Duration stat. bitrate  80 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", statDuration(80000, intSum));
-                Console.WriteLine("[Duration stat. bitrate 150 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", statDuration(150000, intSum));
-                Console.WriteLine("[Duration stat. bitrate 200 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", statDuration(200000, intSum));
+                Console.WriteLine("[Duration stat. bitrate  80 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(80000, intSum));
+                Console.WriteLine("[Duration stat. bitrate 150 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(150000, intSum));
+                Console.WriteLine("[Duration stat. bitrate 200 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(200000, intSum));
                 Console.WriteLine();
                 Console.WriteLine("####################################");
                 Console.WriteLine("\r\n[*] Started on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
+                Console.WriteLine("\r\n[*] Signature algorythm detected : " + algoDisplay);
             }
             catch (Exception ex)
             {
@@ -85,16 +125,16 @@ namespace JWTest
             {
                 var jwt = rawToken.Split('.');
                 var phash = jwt[0] + "." + jwt[1];
-                var hash = base64UrlDcode(jwt[2]);
+                var hash = Base64UrlDcode(jwt[2]);
                 if (live)
                 {
-                    setTimer();
+                    SetTimer();
                 }
                 else
                 {
                     Console.WriteLine("[*] Enumeration in progress...");
                 }    
-                enumerate(realLength, charset, phash, hash);
+                Enumerate(realLength, charset, phash, hash);
                 if (!found)
                 {
                     Console.WriteLine("[*] Ended on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
@@ -112,43 +152,55 @@ namespace JWTest
             }
         }
 
-        private static void enumerate(int length, string charset, string phash, byte[] hash)
+        private static void Enumerate(int length, string charset, string phash, byte[] hash)
         {
             var q = charset.Select(x => x.ToString());
             for (int i = 0; i < length - 1; i++)
             {
                 q = q.SelectMany(x => charset, (x, y) => x + y);
-            }
-            // OLD monothread code
-            /*HMACSHA256 hm = new HMACSHA256();
-            foreach (var item in q)
-            {
-                
-                hm.Key = Encoding.UTF8.GetBytes(item);
-                var h = hm.ComputeHash(Encoding.UTF8.GetBytes(phash));
-                if (StructuralComparisons.StructuralEqualityComparer.Equals(h, hash))
-                {
-                    timer1.Stop();
-                    Console.WriteLine("\r\n\r\n[!] Done ! > Secret was: " + item);
-                    Console.WriteLine("\r\n[*] Ended on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
-                    break;
-                }
-                //Console.Write("\r Tested combinaisons : {0}", tick);
-                tick++;
-                count++;
-                
-            }*/
+            }           
             // Multithread
             Parallel.ForEach(q, (item) =>
-               compute(item, phash, hash)
+               Compute(item, phash, hash)
             );           
         }
 
-        private static void compute(string item, string phash, byte[] hash)
+        private static void Compute(string item, string phash, byte[] hash)
         {
-            HMACSHA256 hm = new HMACSHA256();
-            hm.Key = Encoding.UTF8.GetBytes(item);
-            if (StructuralComparisons.StructuralEqualityComparer.Equals(hm.ComputeHash(Encoding.UTF8.GetBytes(phash)), hash))
+            HMAC hm;
+            byte[] bytes = new byte[1];
+            switch (algo)
+            {
+                case 1:
+                    hm = new HMACSHA1
+                    {
+                        Key = Encoding.UTF8.GetBytes(item)
+                    };
+                    bytes = hm.ComputeHash(Encoding.UTF8.GetBytes(phash));
+                    break;
+                case 2:
+                    hm = new HMACSHA256
+                    {
+                        Key = Encoding.UTF8.GetBytes(item)
+                    };
+                    bytes = hm.ComputeHash(Encoding.UTF8.GetBytes(phash));
+                    break;
+                case 3:
+                    hm = new HMACSHA384
+                    {
+                        Key = Encoding.UTF8.GetBytes(item)
+                    };
+                    bytes = hm.ComputeHash(Encoding.UTF8.GetBytes(phash));
+                    break;
+                case 4:
+                    hm = new HMACSHA512
+                    {
+                        Key = Encoding.UTF8.GetBytes(item)
+                    };
+                    bytes = hm.ComputeHash(Encoding.UTF8.GetBytes(phash));
+                    break;               
+            }           
+            if (StructuralComparisons.StructuralEqualityComparer.Equals(bytes, hash))
             {
                 if (live)
                 {
@@ -162,11 +214,12 @@ namespace JWTest
         }     
 
         #region Display
-        private static void printBanner()
+        private static void PrintBanner()
         {
             Console.WriteLine("####################################");
             Console.WriteLine("#              JWTrek         " + version + " #");
-            Console.WriteLine("#  JWT Token Bruteforcer  (HS256)  #");
+            Console.WriteLine("#       JWT Token Bruteforcer      #");
+            Console.WriteLine("#    HS128  HS256  HS384  HS512    #");
             Console.WriteLine("#      by jo @ Georges Taupin      #");
             Console.WriteLine("#       C# .NET 4.5.2 - 2019       #");
             Console.WriteLine("# https://github.com/jo555/JWTrek  #");
@@ -175,24 +228,24 @@ namespace JWTest
         #endregion
 
         #region Utilities
-        private static TimeSpan statDuration(int bitrate, BigInteger total)
+        private static TimeSpan StatDuration(int bitrate, BigInteger total)
         {
             BigInteger seconds = total / bitrate;
             TimeSpan ts = TimeSpan.FromSeconds((double)seconds);
             return ts;
         }
 
-        private static byte[] base64UrlDcode(string s)
+        private static byte[] Base64UrlDcode(string s)
         {
             s = s.Replace('-', '+');
             s = s.Replace('_', '/');
-            s = s + "==".Substring(0, s.Length % 3);
+            s += "==".Substring(0, s.Length % 3);
             return Convert.FromBase64String(s);
         }
         #endregion
 
         #region Monitoring
-        private static void setTimer()
+        private static void SetTimer()
         {
             timer1 = new System.Timers.Timer(1000);
             timer1.Elapsed += OnTimedEvent;
