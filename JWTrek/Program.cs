@@ -24,21 +24,23 @@ namespace JWTest
         public static bool live = false;
         public static string version = "v2.1";
         public static string defaultCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
-        public static int defaultLength = 6;
+        public static int defaultLength = 6;       
 
         static void Main(string[] args)
-        {
+        {           
             PrintBanner();
             bool rawTokenOk = false;
             bool rawTokenIsSupported = false;
             string rawToken = "";
             while (!rawTokenOk)
             {
-                Console.WriteLine("\r\n[?] Please enter token");
-                byte[] bytes = new byte[2000];
-                Stream inputStream = Console.OpenStandardInput(bytes.Length);
-                Console.SetIn(new StreamReader(inputStream));
+                Console.WriteLine("\r\n[?] Please enter JWT token OR file path contains token (prefered for long token)");
                 rawToken = Console.ReadLine();
+                if (File.Exists(rawToken))
+                {                    
+                    rawToken = File.ReadAllText(rawToken);
+                    rawToken = rawToken.Trim();
+                }
                 try
                 {
                     byte[] btab = Base64UrlDcode(rawToken.Split('.')[0]);
