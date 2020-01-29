@@ -8,19 +8,21 @@ using System.Threading.Tasks;
 using System.Globalization;
 using System.Numerics;
 using System.IO;
+using System.Collections.Generic;
 
 namespace JWTest
 {
     class Program
     {
         public static Timer timer1;
+        public static List<int> pile;
         public static int algo;
         public static string algoDisplay;
         public static int count;
         public static int tick = 0;
         public static bool found = false;
         public static bool live = false;
-        public static string version = "v2.0";
+        public static string version = "v2.1";
         public static string defaultCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
         public static int defaultLength = 6;
 
@@ -67,7 +69,7 @@ namespace JWTest
                     }
                     if (!rawTokenIsSupported)
                     {
-                        Console.WriteLine("[!] Algorythm not supported");
+                        Console.WriteLine("[!] Algorithm not supported");
                     }
                 }
                 catch (Exception ex) 
@@ -111,12 +113,12 @@ namespace JWTest
                 Console.WriteLine();
                 Console.WriteLine("####################################");
                 Console.WriteLine("\r\n[*] Started on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
-                Console.WriteLine("\r\n[*] Signature algorythm detected : " + algoDisplay);
+                Console.WriteLine("\r\n[*] Signature algorithm detected : " + algoDisplay);
             }
             catch (Exception ex)
             {
                 Console.WriteLine("[!] Failed condition... : " + ex.Message);
-                Console.WriteLine("Press a key to continue...");
+                Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
                 Environment.Exit(0);
             }
@@ -133,23 +135,26 @@ namespace JWTest
                 else
                 {
                     Console.WriteLine("[*] Enumeration in progress...");
-                }    
+                }
+                pile = new List<int>();
                 Enumerate(realLength, charset, phash, hash);
                 if (!found)
                 {
-                    Console.WriteLine("[*] Ended on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
                     Console.WriteLine("[!] Done, not found...");
-                    Console.WriteLine("Press a key to continue...");
+                    Console.WriteLine("Press any key to exit...");
                     Console.ReadKey();
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("[!] Error - invalid token : "+ ex.Message);
-                Console.WriteLine("Press a key to continue...");
+                Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
                 Environment.Exit(0);
             }
+            Console.WriteLine("[*] Ended on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
         }
 
         private static void Enumerate(int length, string charset, string phash, byte[] hash)
@@ -206,8 +211,13 @@ namespace JWTest
                 {
                     timer1.Stop();
                 }
-                Console.WriteLine("\r\n[!] Done ! > Secret was: " + item);
-                Console.WriteLine("\r\n[*] Ended on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
+                Console.WriteLine("");
+                Console.WriteLine("\r\n[!] Done ! > Secret found: " + item + "\r\n");
+                if (pile != null && pile.Count > 0)
+                {
+                    Console.WriteLine("[i] Average bitrate : " + Math.Round(pile.Average()) + "/s");
+                }                
+                found = true;
             }
             tick++;
             count++;
@@ -256,6 +266,7 @@ namespace JWTest
         private static void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
             Console.Write("\r{0}", "[*] Enumeration in progress > [Bitrate : " + count + "/s] [Total tested :" + tick + "]");
+            pile.Add(count);
             count = 0;
         }
         #endregion
