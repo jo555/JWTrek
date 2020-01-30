@@ -1,5 +1,5 @@
 # JWTrek
-JWT Token C# Bruteforcer (HS128, HS256, HS384, HS512) 
+JWT Token C# Cracker
 
 To crack  JWT tokens.
 * HS128, HS256, HS384, HS512 support
