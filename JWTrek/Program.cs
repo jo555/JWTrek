@@ -22,9 +22,13 @@ namespace JWTest
         public static int tick = 0;
         public static bool found = false;
         public static bool live = false;
-        public static string version = "v2.1";
+        public static string version = "v3.0";
         public static string defaultCharset = "abcdefghijklmnopqrstuvwxyz0123456789";
-        public static int defaultLength = 6;       
+        public static int defaultLength = 6;
+        public static int realLength;
+        public static string charset;
+        public static string wordlistPath;
+        public static string mode = "";
 
         static void Main(string[] args)
         {           
@@ -34,7 +38,7 @@ namespace JWTest
             string rawToken = "";
             while (!rawTokenOk)
             {
-                Console.WriteLine("\r\n[?] Please enter JWT token OR file path contains token (prefered for long token)");
+                Console.WriteLine("\r\n[?] Please enter JWT token OR file path contains token (prefered for long token (>254 chars))");
                 rawToken = Console.ReadLine();
                 if (File.Exists(rawToken))
                 {                    
@@ -80,19 +84,53 @@ namespace JWTest
                 }
                 rawTokenOk = rawTokenIsSupported && (rawToken != string.Empty) && (rawToken.Split('.').Length == 3);
             }           
-
-            Console.WriteLine("\r\n[?] Please enter custom charset [default: "+ defaultCharset + "]");
-            string charset = Console.ReadLine();
-            if ((charset == null) || (charset == string.Empty))
+            while (mode != "1" && mode != "2")
             {
-                charset = defaultCharset;
+                Console.WriteLine("\r\n[?]   1-Bruteforce    2-Wordlist");
+                mode = Console.ReadLine();               
             }
 
-            Console.WriteLine("\r\n[?] Please enter length [default: "+ defaultLength + "]");
-            if (!int.TryParse(Console.ReadLine(), out int realLength))
+            if (mode.Equals("2"))
             {
-                realLength = defaultLength;
+                // Wordlist
+                bool isPathOk = false;
+                while (!isPathOk)
+                {
+                    Console.WriteLine("\r\n[?] Please enter wordlist path");
+                    wordlistPath = Console.ReadLine();
+                    if (File.Exists(wordlistPath))
+                    {
+                        if (new FileInfo(wordlistPath).Length > 0)
+                        {
+                            isPathOk = true;
+                        }
+                        else
+                        {
+                            Console.WriteLine("\r\n[!] This file is empty");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("\r\n[!] Wrong path");
+                    }                   
+                }
             }
+            else
+            {
+                // Bruteforce
+                Console.WriteLine("\r\n[?] Please enter custom charset [default: " + defaultCharset + "]");
+                charset = Console.ReadLine();
+                if ((charset.Equals(null)) || (charset.Equals(string.Empty)))
+                {
+                    charset = defaultCharset;
+                }
+
+                Console.WriteLine("\r\n[?] Please enter length [default: " + defaultLength + "]");
+                if (!int.TryParse(Console.ReadLine(), out realLength))
+                {
+                    realLength = defaultLength;
+                }
+            }           
 
             Console.WriteLine("\r\n[?] Live monitoring ? y/n");
             live = Console.ReadLine().Equals("y");     
@@ -100,18 +138,38 @@ namespace JWTest
             Console.Clear();
             PrintBanner();
             Console.WriteLine("[TOKEN] > " + rawToken);
-            Console.WriteLine("[CHARSET] > " + charset);
-            Console.WriteLine("[LENGTH] > " + realLength);
+            if (mode.Equals("2")) // Wordlist
+            {               
+                Console.WriteLine("[MODE] > Wordlist");
+                Console.WriteLine("[WORDLIST] > " + wordlistPath);
+            }
+            else // Bruteforce
+            {
+                Console.WriteLine("[MODE] > Bruteforce");
+                Console.WriteLine("[CHARSET] > " + charset);
+                Console.WriteLine("[LENGTH] > " + realLength);
+            }
             Console.WriteLine();
             try
             {
-                double sum = Math.Pow(charset.Length, realLength);
-                NumberFormatInfo nfi = new CultureInfo("en-US", false).NumberFormat;
-                BigInteger intSum = Convert.ToInt64(sum);
-                Console.WriteLine("[Total combinations] > " + sum.ToString("N", nfi).Replace(".00", ""));
-                Console.WriteLine("[Duration stat. bitrate  80 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(80000, intSum));
-                Console.WriteLine("[Duration stat. bitrate 150 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(150000, intSum));
-                Console.WriteLine("[Duration stat. bitrate 200 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(200000, intSum));
+                if (mode.Equals("2")) // Wordlist
+                {
+                    BigInteger intSum = File.ReadLines(wordlistPath).Count();
+                    Console.WriteLine("[Wordlist length] > " + intSum + " words");
+                    Console.WriteLine("[Duration stat. bitrate  80 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(80000, intSum));
+                    Console.WriteLine("[Duration stat. bitrate 150 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(150000, intSum));
+                    Console.WriteLine("[Duration stat. bitrate 200 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(200000, intSum));
+                }
+                else // Bruteforce
+                {
+                    double sum = Math.Pow(charset.Length, realLength);
+                    NumberFormatInfo nfi = new CultureInfo("en-US", false).NumberFormat;
+                    BigInteger intSum = Convert.ToInt64(sum);
+                    Console.WriteLine("[Total combinations] > " + sum.ToString("N", nfi).Replace(".00", ""));
+                    Console.WriteLine("[Duration stat. bitrate  80 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(80000, intSum));
+                    Console.WriteLine("[Duration stat. bitrate 150 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(150000, intSum));
+                    Console.WriteLine("[Duration stat. bitrate 200 000/s] > {0:%d} days {0:%h} hours {0:%m} minutes {0:%s} seconds", StatDuration(200000, intSum));
+                }
                 Console.WriteLine();
                 Console.WriteLine("####################################");
                 Console.WriteLine("\r\n[*] Started on " + DateTime.Now.ToString("dddd , dd MMM yyyy, HH:mm:ss"));
@@ -161,11 +219,20 @@ namespace JWTest
 
         private static void Enumerate(int length, string charset, string phash, byte[] hash)
         {
-            var q = charset.Select(x => x.ToString());
-            for (int i = 0; i < length - 1; i++)
+            IEnumerable<string> q;
+            if (mode.Equals("2")) // wordlist
             {
-                q = q.SelectMany(x => charset, (x, y) => x + y);
-            }           
+                q = File.ReadLines(wordlistPath);
+            }
+            else // Bruteforce
+            {
+                q = charset.Select(x => x.ToString());
+                for (int i = 0; i < length - 1; i++)
+                {
+                    q = q.SelectMany(x => charset, (x, y) => x + y);
+                }
+            }
+            
             // Multithread
             Parallel.ForEach(q, (item) =>
                Compute(item, phash, hash)
@@ -230,7 +297,7 @@ namespace JWTest
         {
             Console.WriteLine("####################################");
             Console.WriteLine("#              JWTrek         " + version + " #");
-            Console.WriteLine("#       JWT Token Bruteforcer      #");
+            Console.WriteLine("#         JWT Token Cracker        #");
             Console.WriteLine("#    HS128  HS256  HS384  HS512    #");
             Console.WriteLine("#      by jo @ Georges Taupin      #");
             Console.WriteLine("#       C# .NET 4.5.2 - 2019       #");
