@@ -12,7 +12,7 @@ To crack  JWT tokens.
 
 Launch EXE and follow the prompt:
 
-* **Token**: the full JWT token string to crack
+* **Token or token file path**: the full JWT token string to crack or the file path that contains the token (prefered for long token)
 * **Mode**[BRUTEFORCE]:
     * **Charset**: the alphabet to use for the brute force (default: "abcdefghijklmnopqrstuvwxyz0123456789")
     * **Length**: the length of the string generated during the brute force (default: 6)
